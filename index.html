@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+
+<script src="leaflet.js"> // Bibliothèque Leaflet : http://leafletjs.com/ </script>
+<script src="leaflet.measure.js"></script>
+
+<title>Les pays d'Afrique</title>
+<link rel="stylesheet" type="text/css" href="leaflet.css"/>
+<link rel="stylesheet" type="text/css" href="style.css"/>
+<link rel="stylesheet" type="text/css" href="leaflet.measure.css">
+
+<meta charset="utf-8">
+
+<!-- Récupération de la liste des lieux insolites au chargement de la page -->
+<body onload="load_data();">
+
+<h1>Les Pays d'Afrique</h1>
+<div>
+
+    <div id="instructions"><p>La flèche en haut à gauche permet de <em>mesurer des distances</em> en cliquant sur deux points de la carte.<br>Un deuxième clic sur la flèche permet d'arrêter la série de mesures<br> On peut également appuyer sur <strong>M</strong> pour activer la mesure et <strong>P</strong> pour la désactiver </p></div>
+
+	<!-- Zone pour l'affichage dynamique des descriptions -->
+    <div id="description"></div>
+
+
+
+    <!-- Zone pour l'ajout de la carte grace à la bibliothèque leaflet -->
+    <div id="map" style="margin-bottom:1.33em"></div>
+
+
+
+ 
+
+</div>
+</body>
+
+
+<script>
+
+    // Création de la carte et positionnement de la vue par défaut
+    
+    let map = L.map('map').setView([5, 18], 3);
+
+    // Ajout d'une couche de dalles OpenStreetMap
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    L.control.measure({
+        position: 'topleft',
+        
+        keyboard: true,
+        //  raccourci pour activer la mesure
+        activeKeyCode: 'M'.charCodeAt(0),
+        //  raccourci pour désactiver la mesure
+        cancelKeyCode: 'P'.charCodeAt(0),
+
+		lineWeight: 2,
+
+        lineColor: 'green',
+        
+        
+        lineDashArray: '7, 7',
+        
+        lineOpacity: 1,
+
+    }).addTo(map);
