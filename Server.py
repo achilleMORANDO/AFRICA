@@ -152,3 +152,91 @@ class RequestHandler(http.server.SimpleHTTPRequestHandler):
             headers = [('Content-Type', 'text/html;charset=utf-8')]
             self.send(body, headers)
             
+ #
+    # On renvoie les informations d'un pays au format json
+    #
+    def send_json_country(self, country):
+
+        # on récupère le pays depuis la base de données
+        r = self.db_get_country(country)
+
+        # on n'a pas trouvé le pays demandé
+        if r is None:
+            self.send_error(404, 'Country not found')
+
+        # on renvoie un dictionnaire au format JSON
+        else:
+            data = {k: r[k] for k in r.keys()}
+            json_data = json.dumps(data, indent=4)
+            headers = [('Content-Type', 'application/json')]
+            self.send(json_data, headers)
+
+    #
+    # Récupération de la liste des pays depuis la base
+    #
+    def db_get_countries(self, continent=None):
+        c = conn.cursor()
+        sql = 'SELECT wp, capital, latitude, longitude, currency from countries'
+
+        # les pays d'un continent
+        if continent:
+            sql += ' WHERE continent LIKE ?'
+            c.execute(sql, ('%{}%'.format(continent),))
+
+        # tous les pays de la base
+        else:
+            c.execute(sql)
+
+        return c.fetchall()
+
+    #
+    # Récupération d'un pays dans la base
+    #
+    def db_get_country(self, country):
+        # préparation de la requête SQL
+        c = conn.cursor()
+        sql = 'SELECT * from countries WHERE wp=?'
+
+        # récupération de l'information (ou pas)
+        c.execute(sql, (country,))
+        return c.fetchone()
+
+    #
+    # On envoie les entêtes et le corps fourni
+    #
+    def send(self, body, headers=[]):
+
+        # on encode la chaine de caractères à envoyer
+        encoded = bytes(body, 'UTF-8')
+
+        self.send_raw(encoded, headers)
+
+    def send_raw(self, data, headers=[]):
+        # on envoie la ligne de statut
+        self.send_response(200)
+
+        # on envoie les lignes d'entête et la ligne vide
+        [self.send_header(*t) for t in headers]
+        self.send_header('Content-Length', int(len(data)))
+        self.end_headers()
+
+        # on envoie le corps de la réponse
+        self.wfile.write(data)
+
+
+#
+# Ouverture d'une connexion avec la base de données
+#
+conn = sqlite3.connect('pays.sqlite')
+
+# Pour accéder au résultat des requêtes sous forme d'un dictionnaire
+conn.row_factory = sqlite3.Row
+
+#
+# Instanciation et lancement du serveur
+#
+httpd = socketserver.TCPServer(("", 8888), RequestHandler)
+httpd.serve_forever()
+
+
+            
