@@ -60,28 +60,14 @@ a {
 
 i {
   float: left;
-  border-width: 2px;
-  border-style: none none none solid;
-  border-color: orange;
   padding-left: 10px;
   padding-right: 30px;
-  background-color: lightsalmon;
 }
 
-table{
-  padding-left: 50px;
-  float: left;
-  border-collapse: collapse;
-}
-
-tr:nth-child(even) {
-  background-color: sandybrown;
-}
-
-tr:nth-child(odd) {
-  background-color: tan;
-}
-
-td:nth-child(2) {
-  padding-left: 8px;
-}
+li span { 
+ display:table-cell;
+ width:130px;
+ }
+li { /*pour l'alignement des puces*/
+ padding-left:20px;
+ }
