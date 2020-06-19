@@ -64,3 +64,83 @@
         lineOpacity: 1,
 
     }).addTo(map);
+		
+    //  Fonction appelée au chargement de la page
+    function load_data() {
+
+        // objet pour l'envoi d'une requête Ajax
+        let xhr = new XMLHttpRequest();
+
+        // fonction appelée lorsque la réponse à la requête (liste des lieux insolites) sera arrivée
+        xhr.onload = function () {
+
+            // transformation des données renvoyées par le serveur
+            // responseText est du type string, data est une liste
+            let data = JSON.parse(this.responseText);
+
+            // boucle sur les lieux
+            for (let n = 0; n < data.length; n++) {
+                // insertion d'un marqueur à la position du lieu,
+                // attachement d'une popup, capture de l'événement 'clic'
+                // ajout d'une propriété personnalisée au marqueur
+                L.marker([data[n].latitude, data[n].longitude]).addTo(map)
+                    .bindPopup('Lieu: ' + data[n].wp.replace(/_/g, ' '))
+                    .addEventListener('click', OnMarkerClick)
+                    .idnum = data[n].wp;
+            }
+        };
+
+        // Envoi de la requête Ajax pour la récupération de la liste des lieux
+        xhr.open('GET', '/service/countries/', true);
+        xhr.send();
+    }
+
+    // Fonction appelée lors d'un clic sur un marqueur
+    function OnMarkerClick(e) {
+
+        // objet pour l'envoi d'une requête Ajax
+        let xhr = new XMLHttpRequest();
+
+        // fonction appelée lorsque la réponse à la requête (description d'un lieu insolite) sera arrivée
+        xhr.onload = function () {
+
+            // transformation des données renvoyées par le serveur
+            // responseText est du type string, data est un objet
+            
+			
+		     let data = JSON.parse(this.responseText);
+			   
+            //const capitalize = (s) => {
+              //  if (typeof s !== 'string') return '';
+                //return s.charAt(0).toUpperCase() + s.slice(1)
+            //};
+
+
+            // affichage dans la zone 'description' du nom (reprise dans le popup)
+            // et de la description récupérée par l'appel au serveur
+            description.innerHTML = '<b><i>' + e.target.getPopup().getContent()
+                + '<br><br><img src="/flags/' + data.flag + '.png"></i>'
+                + '<table><tr><td>Nom: </td><td>' + data.name + '</td></tr>'
+                + '<tr><td>Capitale: </td><td>' + data.capital + '</td></tr>'
+				//+ '<tr><td>Population: </td><td>' + data.population + '</td></tr>'
+				//+ '<tr><td>PIB/hab: </td><td>' + data.pib + '</td></tr>'
+				//+ '<tr><td>Densité: </td><td>' + data.density + '</td></tr>'
+                + '<tr><td>Latitude: </td><td>' + data.latitude + '</td></tr>'
+                + '<tr><td>Longitude: </td><td>' + data.longitude + '</td></tr>'
+                + '<tr><td>Monnaie: </td><td>' + data.currency + '</td></tr>'
+                + '<tr><td>Superficie: </td><td>' + data.superficie + ' km<sup>2</sup>' + '</td></tr>'
+                //+ '<tr><td>Type de gouvernement: </td><td>' + capitalize(data.government_type) + '</td></tr>'
+                + '<tr><td>Plus d\'infos: </td><td><a href=\"http://wikipedia.org/wiki/' + data.wp + '\">Page Wikipedia</a>' + '</td></tr>'
+                + '</table>'
+            ;
+        };
+
+        // Le numéro du lieu est récupéré via la propriété personnalisée du marqueur
+        let idnum = e.target.idnum;
+
+        // Envoi de la requête Ajax pour la récupération de la description du lieu de numéro idnum
+        xhr.open('GET', '/service/country/' + idnum, true);
+        xhr.send();
+    }
+</script>
+
