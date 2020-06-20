@@ -135,6 +135,38 @@ def get_government_type(wp_info):
     print('Error fetching Government type')
     return None
 
+def get_GDP_PPP_per_capita(wp_info):
+    if 'GDP_PPP_per_capita' in wp_info:
+        GDP_PPP_per_capita=wp_info['GDP_PPP_per_capita']
+        return GDP_PPP_per_capita
+    else :
+        print('Error fetching GDP_PPP_per_capita')
+        return None
+
+def get_official_languages(wp_info):
+    if 'official_languages' in wp_info:
+        name=wp_info['official_languages']
+        # ici on prend toute les langues qui sont entre [[ et qui se trouve après |
+        #m est une liste
+        m = re.findall("\[\[[^|]+\|([^\]]+)\]\][^[]+", name)
+        name=''
+        for k in m:
+            name+=k
+            name+=' '
+        return name
+    elif 'languages' in wp_info:
+        name=wp_info['languages']
+        # ici on prend toute les langues qui sont entre [[ et qui se trouve après |
+        #m est une liste
+        m = re.findall("\[\[[^|]+\|([^\]]+)\]\][^[]+", name)
+        name=''
+        for k in m:
+            name+=k
+            name+=' '
+        return name
+    else :
+        print('Error fetching language')
+        return None
 
 def get_coords(wp_info):
     # S'il existe des coordonnées dans l'infobox du pays
@@ -258,8 +290,8 @@ def cv_coords(str_coords):
 def save_country(database, country, info):
     # préparation de la commande SQL
     c = database.cursor()
-    sql = 'REPLACE INTO countries (wp, name, capital, latitude, longitude, currency, superficie, government_type)' \
-          ' VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+    sql = 'REPLACE INTO countries (wp, name, capital, latitude, longitude, currency, superficie, government_type, population, density, hdi, hdi_change, gdph, GDP_PPP_per_capita, official_languages)' \
+          ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ? ,? ,? ,? ,? ,? ,?)'
 
     # les infos à enregistrer
     name = get_name(info)
@@ -268,9 +300,16 @@ def save_country(database, country, info):
     currency = get_currency(info)
     superficie = get_superficie(info)
     government_type = get_government_type(info)
+    population=get_population(info)
+    density=get_density(info)
+    hdi=get_hdi(info)
+    hdi_change=get_growth_hdi(info)
+    gdph=get_GDPh(info)
+    GDP_PPP_per_capita=get_GDP_PPP_per_capita(info)
+    official_languages=get_official_languages(info)
 
     # soumission de la commande (noter que le second argument est un tuple)
-    c.execute(sql, (country, name, capital, coords['lat'], coords['lon'], currency, superficie, government_type))
+    c.execute(sql, (country, name, capital, coords['lat'], coords['lon'], currency, superficie, government_type, population, density, hdi, hdi_change, gdph, GDP_PPP_per_capita, official_languages))
     conn.commit()
 
 
