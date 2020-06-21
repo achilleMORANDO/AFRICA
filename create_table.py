@@ -3,11 +3,16 @@ from zipfile import ZipFile
 import json
 import re
 import wptools
+#chemin
+import os
+os.chdir('C:\\Users\\Public\python')
+cwd = os.getcwd()
 
-conn = sqlite3.connect('pays.sqlite')
+##
+conn = sqlite3.connect('pays2.sqlite')
 
 
-def init_db(continent):
+def create_table(continent):
     with ZipFile('{}.zip'.format(continent), 'r') as z:
         files = z.namelist()
         for f in files:
@@ -107,6 +112,32 @@ def get_currency(wp_info):
             return currency
     return None
 
+def get_population(wp_info):
+    if 'population_census' in wp_info:
+        population = wp_info['population_census']  # type: str
+        population = population.replace(',', '')
+        population = population.replace(' ', '')
+        population=population.replace('', '')
+        if population == '24905843{{citationneeded|date|=|April2019}}':
+            return 24905843
+        if population == '21397000(52nd)':
+            return 21397000
+        if population == '10515973{{sfn|NationalInstituteofStatisticsofRwanda|2014|p|=|3}}':
+            return 10515973
+        if population == '51770560{{rp|18}}':
+            return 51770560
+        if wp_info['common_name']=='South Sudan':
+            return 51770560
+        if wp_info['common_name']=='Sudan':
+            return 30894000
+        else :
+            population_int = int(population)
+            population = f'{population_int:,}'
+            return population
+
+    else:
+        print('Error fetching population')
+        return None
 
 def get_superficie(wp_info):
     if 'area_km2' in wp_info:
@@ -118,6 +149,32 @@ def get_superficie(wp_info):
         return superficie
     else:
         print('Error fetching superficie')
+        return None
+
+def get_density(wp_info):
+    if 'population_density_km2' in wp_info:
+        density = wp_info['population_density_km2']  # type: str
+        density = density.replace('.',',')
+        return density
+    else:
+        print('Error fetching density')
+        return None
+
+def get_hdi(wp_info):
+    if 'HDI' in wp_info:
+        hdi = wp_info['HDI']  # type: str
+        hdi = hdi.replace('.',',')
+        return hdi
+    else:
+        print('Error fetching hdi')
+        return None
+
+def get_growth_hdi(wp_info):
+    if 'HDI_change' in wp_info:
+        hdi_change = wp_info['HDI_change']  # type: str
+        return hdi_change
+    else:
+        print('Error fetching hdi_change')
         return None
 
 
@@ -134,198 +191,3 @@ def get_government_type(wp_info):
             return 'provisional government'
     print('Error fetching Government type')
     return None
-
-def get_GDP_PPP_per_capita(wp_info):
-    if 'GDP_PPP_per_capita' in wp_info:
-        GDP_PPP_per_capita=wp_info['GDP_PPP_per_capita']
-        return GDP_PPP_per_capita
-    else :
-        print('Error fetching GDP_PPP_per_capita')
-        return None
-
-def get_official_languages(wp_info):
-    if 'official_languages' in wp_info:
-        name=wp_info['official_languages']
-        # ici on prend toute les langues qui sont entre [[ et qui se trouve après |
-        #m est une liste
-        m = re.findall("\[\[[^|]+\|([^\]]+)\]\][^[]+", name)
-        name=''
-        for k in m:
-            name+=k
-            name+=' '
-        return name
-    elif 'languages' in wp_info:
-        name=wp_info['languages']
-        # ici on prend toute les langues qui sont entre [[ et qui se trouve après |
-        #m est une liste
-        m = re.findall("\[\[[^|]+\|([^\]]+)\]\][^[]+", name)
-        name=''
-        for k in m:
-            name+=k
-            name+=' '
-        return name
-    else :
-        print('Error fetching language')
-        return None
-
-def get_coords(wp_info):
-    # S'il existe des coordonnées dans l'infobox du pays
-    # (cas le plus courant)
-    if 'coordinates' in wp_info:
-
-        # (?i) - ignorecase - matche en majuscules ou en minuscules
-        # ça commence par "{{coord" et se poursuit avec zéro ou plusieurs
-        #   espaces suivis par une barre "|"
-        # après ce motif, on mémorise la chaîne la plus longue possible
-        #   ne contenant pas de },
-        # jusqu'à la première occurence de "}}"
-        m = re.match('(?i).*{{coord\s*\|([^}]*)}}', wp_info['coordinates'])
-
-        # l'expression régulière ne colle pas, on affiche la chaîne analysée pour nous aider
-        # mais c'est un aveu d'échec, on ne doit jamais se retrouver ici
-        if m is None:
-            print(' Could not parse coordinates info {}'.format(wp_info['coordinates']))
-            return None
-
-        # cf. https://en.wikipedia.org/wiki/Template:Coord#Examples
-        # on a récupère une chaîne comme :
-        # 57|18|22|N|4|27|32|W|display=title
-        # 44.112|N|87.913|W|display=title
-        # 44.112|-87.913|display=title
-        str_coords = m.group(1)
-
-        # on convertit en numérique et on renvoie
-        if str_coords[0:1] in '0123456789':
-            return cv_coords(str_coords)
-
-    # FIX manuel (l'infobox ne contient pas d'information directement exploitable)
-    if 'common_name' in wp_info and wp_info['common_name'] == 'the Philippines':
-        return cv_coords('14|35|45|N|120|58|38|E')
-    if 'common_name' in wp_info and wp_info['common_name'] == 'Tanzania':
-        return cv_coords('6|10|23|S|35|44|31|E')
-
-    # On n'a pas trouvé de coordonnées dans l'infobox du pays
-    # on essaie avec la page de la capitale
-    capital = get_capital(wp_info)
-    if capital:
-        print(' Fetching capital coordinates...')
-        return get_coords(get_info(capital))
-
-    # Aveu d'échec, on ne doit jamais se retrouver ici
-    print(' Could not fetch country coordinates')
-    return None
-
-
-def get_info(country):
-    # récupération de la page du pays passé en argument
-    # on peut ajouter silent=True pour éviter le message sur fond rose
-    page = wptools.page(country, silent=True)
-
-    # analyse du contenu de la page
-    # l'argument False sert à ne pas afficher de message sur fond rose
-    page.get_parse(False)
-
-    # On renvoie l'infobox
-    return page.data['infobox']
-
-
-def cv_coords(str_coords):
-    """Conversion d'une chaine de caracteres decrivant une position géographisuqe en coordonnees numeriques latitude
-    et longitude"""
-    # on découpe au niveau des "|"
-    c = str_coords.split('|')
-
-    # on extrait la latitude en tenant compte des divers formats
-    lat = float(c.pop(0))
-    if c[0] == 'N':
-        c.pop(0)
-    elif c[0] == 'S':
-        lat = -lat
-        c.pop(0)
-    elif len(c) > 1 and c[1] == 'N':
-        lat += float(c.pop(0)) / 60
-        c.pop(0)
-    elif len(c) > 1 and c[1] == 'S':
-        lat += float(c.pop(0)) / 60
-        lat = -lat
-        c.pop(0)
-    elif len(c) > 2 and c[2] == 'N':
-        lat += float(c.pop(0)) / 60
-        lat += float(c.pop(0)) / 3600
-        c.pop(0)
-    elif len(c) > 2 and c[2] == 'S':
-        lat += float(c.pop(0)) / 60
-        lat += float(c.pop(0)) / 3600
-        lat = -lat
-        c.pop(0)
-
-    # on fait de même avec la longitude
-    lon = float(c.pop(0))
-    if c[0] == 'W':
-        lon = -lon
-        c.pop(0)
-    elif c[0] == 'E':
-        c.pop(0)
-    elif len(c) > 1 and c[1] == 'W':
-        lon += float(c.pop(0)) / 60
-        lon = -lon
-        c.pop(0)
-    elif len(c) > 1 and c[1] == 'E':
-        lon += float(c.pop(0)) / 60
-        c.pop(0)
-    elif len(c) > 2 and c[2] == 'W':
-        lon += float(c.pop(0)) / 60
-        lon += float(c.pop(0)) / 3600
-        lon = -lon
-        c.pop(0)
-    elif len(c) > 2 and c[2] == 'E':
-        lon += float(c.pop(0)) / 60
-        lon += float(c.pop(0)) / 3600
-        c.pop(0)
-
-    # on renvoie un dictionnaire avec les deux valeurs
-    return {'lat': lat, 'lon': lon}
-
-
-def save_country(database, country, info):
-    # préparation de la commande SQL
-    c = database.cursor()
-    sql = 'REPLACE INTO countries (wp, name, capital, latitude, longitude, currency, superficie, government_type, population, density, hdi, hdi_change, gdph, GDP_PPP_per_capita, official_languages)' \
-          ' VALUES (?, ?, ?, ?, ?, ?, ?, ?, ? ,? ,? ,? ,? ,? ,?)'
-
-    # les infos à enregistrer
-    name = get_name(info)
-    capital = get_capital(info)
-    coords = get_coords(info)
-    currency = get_currency(info)
-    superficie = get_superficie(info)
-    government_type = get_government_type(info)
-    population=get_population(info)
-    density=get_density(info)
-    hdi=get_hdi(info)
-    hdi_change=get_growth_hdi(info)
-    gdph=get_GDPh(info)
-    GDP_PPP_per_capita=get_GDP_PPP_per_capita(info)
-    official_languages=get_official_languages(info)
-
-    # soumission de la commande (noter que le second argument est un tuple)
-    c.execute(sql, (country, name, capital, coords['lat'], coords['lon'], currency, superficie, government_type, population, density, hdi, hdi_change, gdph, GDP_PPP_per_capita, official_languages))
-    conn.commit()
-
-
-if __name__ == '__main__':
-    init_db('africa')
-
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
